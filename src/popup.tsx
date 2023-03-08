@@ -17,17 +17,13 @@ const Popup = () => {
 
   const changeBackground = () => {
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+      console.log(tabs);
       const tab = tabs[0];
       if (tab.id) {
-        chrome.tabs.sendMessage(
-          tab.id,
-          {
-            color: "#555555",
-          },
-          (msg) => {
-            console.log("result message:", msg);
-          }
-        );
+        console.log(tab.id);
+        chrome.tabs.sendMessage(tab.id, { color: "#555555" }, (msg) => {
+          console.log("result message:", msg);
+        });
       }
     });
   };

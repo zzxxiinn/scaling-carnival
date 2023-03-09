@@ -1,6 +1,5 @@
 import html2canvas from "html2canvas";
 
-
 function createElement<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   styles: Partial<CSSStyleDeclaration> = {}
@@ -15,38 +14,42 @@ function createElement<K extends keyof HTMLElementTagNameMap>(
   return el;
 }
 
-const el_button = createElement("button");
-const el_wrapper = createElement("div", {
-  display: "flex",
-  justifyContent: "flex-end"
-});
+function gen_modal() {
+  createElement("div", {});
+}
 
 function gen_canvas() {
-  const qa_list = document.querySelectorAll("#__next main .w-full.border-b");
+  const QA_RECORD_CLASS = "#__next main .w-full.border-b";
+  const qa_list = document.querySelectorAll(QA_RECORD_CLASS);
   const el_content_wrapper = createElement("div", {
     display: "flex",
     alignItems: "center",
     flexDirection: "column",
     width: "1024px",
-    fontSize: "12px"
+    fontSize: "12px",
   });
 
-  qa_list.forEach(el => {
+  qa_list.forEach((el) => {
     const clonedEl = el.cloneNode(true) as Element;
     const voteEl = clonedEl.querySelector(".flex.justify-between");
-    if (voteEl) {
-      voteEl.remove();
-    }
+    if (voteEl) voteEl.remove();
 
     el_content_wrapper.append(clonedEl);
   });
 
   document.body.append(el_content_wrapper);
 
-  html2canvas(el_content_wrapper).then(function(canvas) {
+  html2canvas(el_content_wrapper).then(function (canvas) {
     el_wrapper.appendChild(canvas);
   });
 }
+
+const el_wrapper = createElement("div", {
+  display: "flex",
+  justifyContent: "flex-end",
+});
+
+const el_button = createElement("button");
 
 el_button.innerText = "click me!";
 el_button.addEventListener("click", gen_canvas);

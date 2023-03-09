@@ -160,6 +160,10 @@ const Modal = (props: ComponentProps<any>) => {
             dangerouslySetInnerHTML={{ __html: content_wrapper.innerHTML }}
           ></div>
         </div>
+
+        <div style={ModalFooter}>
+          <button>click!</button>
+        </div>
       </div>
     </div>
   );

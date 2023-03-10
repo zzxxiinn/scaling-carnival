@@ -8,6 +8,26 @@ import React, {
 } from "react";
 import ReactDOM from "react-dom";
 
+function elementToImage(element: Element) {
+  const rect = element.getBoundingClientRect();
+  const canvas = document.createElement("canvas");
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+  const ctx = canvas.getContext("2d");
+  ctx!.drawImage(
+    // @ts-ignore
+    element,
+    rect.left,
+    rect.top,
+    rect.width,
+    rect.height,
+    0,
+    0,
+    rect.width,
+    rect.height
+  );
+}
+
 function createElement<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   styles: Partial<CSSStyleDeclaration> = {}
@@ -34,6 +54,33 @@ function gen_canvas() {
   //   wrapper.appendChild(canvas);
   // });
 }
+
+const DownloadIcon = (props: ComponentProps<any>) => {
+  const s: CSSProperties = {
+    width: "20px",
+    height: "20px",
+    verticalAlign: "middle",
+    fill: "currentColor",
+    overflow: "hidden",
+    color: "#e5e5e5",
+    cursor: "pointer",
+    position: "absolute",
+    right: "1em",
+    top: "110px",
+  };
+  return (
+    <svg
+      className="icon"
+      style={s}
+      viewBox="0 0 1024 1024"
+      version="1.1"
+      xmlns="http://www.w3.org/2000/svg"
+      onClick={props.handleClick}
+    >
+      <path d="M512 576l256-256h-192V64h-128v256H256z m232.736-104.736l-71.744 71.744L933.088 640l-421.056 157.024L90.976 640l260.064-96.992-71.744-71.744L0.032 576v256l512 192 512-192v-256z"></path>
+    </svg>
+  );
+};
 
 const CloseIcon = (props: ComponentProps<any>) => {
   const s: CSSProperties = {
@@ -74,7 +121,7 @@ const Modal = (props: ComponentProps<any>) => {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "rgba(0, 0, 0, 0.2)",
+    background: "rgba(0, 0, 0, 0.6)",
     overflow: "hidden",
     padding: "5vh",
   };
@@ -106,6 +153,8 @@ const Modal = (props: ComponentProps<any>) => {
     background: "rgba(0,0,0,.75)",
     transition: "all .3s ease",
   };
+
+  const ModalFooter: CSSProperties = {};
 
   const qa_list = document.querySelectorAll("#__next main .w-full.border-b");
   const content_wrapper = document.createElement("div");
@@ -143,18 +192,30 @@ const Modal = (props: ComponentProps<any>) => {
 
     // remove code whitespace-pre
     cloned.querySelectorAll("code").forEach((el) => {
-      el.style.whiteSpace = "pre-wrap!important";
+      el.style.whiteSpace = "pre-wrap";
     });
 
     content_wrapper.append(cloned);
   });
 
+  const imageContentId = "__IMAGE";
+  const handleDownload = () => {
+    document.body.append(content_wrapper);
+    html2canvas(content_wrapper).then(function (canvas) {
+      chrome.downloads.download({
+        url: canvas.toDataURL("image/png"),
+        filename: "QA.png",
+      });
+    });
+  };
+
   return (
     <div style={MaskStyle}>
       <div style={ContainerStyle}>
         <CloseIcon handleClick={props.handleClose} />
+        <DownloadIcon handleClick={handleDownload} />
 
-        <div style={ModalContent}>
+        <div style={ModalContent} id={imageContentId}>
           <div
             style={FrameStyle}
             dangerouslySetInnerHTML={{ __html: content_wrapper.innerHTML }}

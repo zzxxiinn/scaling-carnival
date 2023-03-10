@@ -4,3 +4,10 @@ function polling() {
 }
 
 polling();
+
+chrome.runtime.onMessage.addListener(function (arg, sender, sendResponse) {
+  // chrome.downloads.download({
+  //   url: response.image,
+  //   filename: "screenshot.png"
+  // });
+});

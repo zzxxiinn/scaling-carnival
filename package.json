@@ -17,6 +17,8 @@
     "url": "https://github.com/chibat/chrome-extension-typescript-starter.git"
   },
   "dependencies": {
+    "@types/dom-to-image": "^2.6.4",
+    "dom-to-image": "^2.6.0",
     "html2canvas": "^1.4.1",
     "react": "^17.0.1",
     "react-dom": "^17.0.1"

@@ -1,5 +1,3 @@
-import html2canvas from "html2canvas";
-
 import React, {
   ComponentProps,
   CSSProperties,
@@ -8,25 +6,113 @@ import React, {
 } from "react";
 import ReactDOM from "react-dom";
 
-function elementToImage(element: Element) {
-  const rect = element.getBoundingClientRect();
-  const canvas = document.createElement("canvas");
-  canvas.width = rect.width;
-  canvas.height = rect.height;
-  const ctx = canvas.getContext("2d");
-  ctx!.drawImage(
-    // @ts-ignore
-    element,
-    rect.left,
-    rect.top,
-    rect.width,
-    rect.height,
-    0,
-    0,
-    rect.width,
-    rect.height
-  );
-}
+let domToImg = (function () {
+  // 转png需要的canvas对象及其上下文
+  let canvas = document.createElement("canvas");
+  let context = canvas.getContext("2d")!;
+
+  // canvas绘制图片元素方法
+  let draw = function (img: any) {
+    let width = img.width,
+      height = img.height;
+    // canvas绘制
+    canvas.width = width;
+    canvas.height = height;
+    // 画布清除
+    context.clearRect(0, 0, width, height);
+    // 绘制图片到canvas
+    context.drawImage(img, 0, 0);
+  };
+
+  // canvas画布绘制的原图片
+  let img = new Image();
+  // 回调
+  let callback = function () {};
+
+  // 图片回调
+  img.onload = function () {
+    draw(this);
+    // 回调方法
+    callback();
+  };
+
+  let exports = {
+    dom: null,
+    // DOM变成svg，并作为图片显示
+    dom2Svg: function () {
+      let dom = this.dom as Element | null;
+      if (!dom) {
+        return this;
+      }
+
+      // 复制DOM节点
+      let cloneDom = dom.cloneNode(true) as Element;
+      cloneDom.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+      cloneDom.classList.remove("outline");
+
+      // 如果有图片，变成base64
+      let imgDom = null;
+      if (cloneDom.tagName.toLowerCase() == "img") {
+        imgDom = cloneDom;
+      } else {
+        // 这里就假设一个图片，多图自己遍历转换下就好了
+        imgDom = cloneDom.querySelector("img");
+      }
+
+      if (imgDom) {
+        draw(imgDom);
+        // @ts-ignore
+        imgDom.src = canvas.toDataURL();
+      }
+
+      let htmlSvg =
+        'data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" width="' +
+        // @ts-ignore
+        dom.offsetWidth +
+        '" height="' +
+        // @ts-ignore
+        dom.offsetHeight +
+        '"><foreignObject x="0" y="0" width="100%" height="100%">' +
+        new XMLSerializer().serializeToString(cloneDom) +
+        document.querySelector("style")!.outerHTML +
+        "</foreignObject></svg>";
+
+      htmlSvg = htmlSvg
+        .replace(/\n/g, "")
+        .replace(/\t/g, "")
+        .replace(/#/g, "%23");
+
+      // 图片地址显示为DOM转换的svg
+      img.src = htmlSvg;
+
+      return this;
+    },
+    // 作为图片下载，JS前端下载可参考这篇文章：
+    // JS前端创建html或json文件并浏览器导出下载 - http://www.zhangxinxu.com/wordpress/?p=6252
+    download: function () {
+      // 创建隐藏的可下载链接
+      let eleLink = document.createElement("a");
+      // 下载图片文件名就按照时间戳来
+      eleLink.download = "zxx_png-" + (+new Date() + "").slice(1, 9) + ".png";
+      eleLink.style.display = "none";
+
+      // 触发图片onload是个异步过程，因此，需要在回调中处理
+      callback = function () {
+        eleLink.href = canvas.toDataURL();
+        // 触发点击
+        document.body.appendChild(eleLink);
+        eleLink.click();
+        // 然后移除
+        document.body.removeChild(eleLink);
+      };
+
+      // dom变图片
+      this.dom2Svg();
+    },
+  };
+
+  return exports;
+})();
 
 function createElement<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -42,17 +128,48 @@ function createElement<K extends keyof HTMLElementTagNameMap>(
   return el;
 }
 
-function gen_canvas() {
-  const qa_list = document.querySelectorAll("#__next main .w-full.border-b");
+function getQAContents() {
+  const QA_LIST_SELECTOR = "#__next main .w-full.border-b";
+
+  const qa_list = document.querySelectorAll(QA_LIST_SELECTOR);
   const content_wrapper = document.createElement("div");
+
   qa_list.forEach((el) => {
-    content_wrapper.append(el.cloneNode(true));
+    const cloned = el.cloneNode(true) as HTMLElement;
+    cloned.style.padding = "0 20px";
+    cloned.style.color = "rgba(208,208,208,0.8)";
+    cloned.classList.forEach((c) => {
+      // distinguish between q and a
+      if (c === "bg-gray-50") {
+        cloned.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
+      }
+
+      const regex = /^dark:|^bg-|^text-/;
+      if (regex.test(c)) cloned.classList.remove(c);
+    });
+
+    // remove vote
+    cloned
+      .querySelectorAll(".flex.justify-between")
+      .forEach((el) => el.remove());
+
+    // remove prose class
+    cloned
+      .querySelectorAll(".prose")
+      .forEach((el) => el.classList.remove("prose"));
+
+    // remove all buttons
+    cloned.querySelectorAll("button").forEach((el) => el.remove());
+
+    // remove code whitespace-pre
+    cloned.querySelectorAll("code").forEach((el) => {
+      el.style.whiteSpace = "pre-wrap";
+    });
+
+    content_wrapper.append(cloned);
   });
 
-  // document.body.append(content_wrapper);
-  // html2canvas(content_wrapper).then(function(canvas) {
-  //   wrapper.appendChild(canvas);
-  // });
+  return content_wrapper;
 }
 
 const DownloadIcon = (props: ComponentProps<any>) => {
@@ -156,57 +273,47 @@ const Modal = (props: ComponentProps<any>) => {
 
   const ModalFooter: CSSProperties = {};
 
-  const qa_list = document.querySelectorAll("#__next main .w-full.border-b");
-  const content_wrapper = document.createElement("div");
-
-  qa_list.forEach((el) => {
-    const cloned = el.cloneNode(true) as HTMLElement;
-    cloned.style.padding = "0 20px";
-    cloned.style.color = "rgba(208,208,208,0.8)";
-    cloned.classList.forEach((c) => {
-      if (c === "bg-gray-50") {
-        cloned.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
-      }
-
-      if (
-        c.startsWith("dark:") ||
-        c.startsWith("bg-") ||
-        c.startsWith("text-")
-      ) {
-        cloned.classList.remove(c);
-      }
-    });
-
-    // remove vote
-    cloned
-      .querySelectorAll(".flex.justify-between")
-      .forEach((el) => el.remove());
-
-    // remove prose class
-    cloned
-      .querySelectorAll(".prose")
-      .forEach((el) => el.classList.remove("prose"));
-
-    // remove all buttons
-    cloned.querySelectorAll("button").forEach((el) => el.remove());
-
-    // remove code whitespace-pre
-    cloned.querySelectorAll("code").forEach((el) => {
-      el.style.whiteSpace = "pre-wrap";
-    });
-
-    content_wrapper.append(cloned);
-  });
+  const QAContent = getQAContents();
 
   const imageContentId = "__IMAGE";
   const handleDownload = () => {
-    document.body.append(content_wrapper);
-    html2canvas(content_wrapper).then(function (canvas) {
-      chrome.downloads.download({
-        url: canvas.toDataURL("image/png"),
-        filename: "QA.png",
-      });
-    });
+    const imageRoot = document.getElementById(imageContentId);
+    if (imageRoot) {
+      // @ts-ignore
+      domToImg.dom = imageRoot;
+      domToImg.download();
+    }
+
+    // const imageRoot = document.getElementById(imageContentId);
+    // if (imageRoot) {
+    //   function filter(node: any) {
+    //     return node.tagName !== "i";
+    //   }
+    //   domtoimage
+    //     .toSvg(imageRoot, { filter: filter })
+    //     .then(function (dataUrl) {
+    //       console.log(dataUrl);
+    //       const img = new Image();
+    //       img.src = dataUrl;
+    //       document.body.appendChild(img);
+    //     })
+    //     .catch((e) => {
+    //       console.log(e);
+    //     });
+    // }
+    // if (imageRoot) {
+    //   html2canvas(imageRoot).then((canvas) => {
+    //     chrome.runtime.sendMessage(
+    //       {
+    //         msg_type: "download-image",
+    //         data: canvas.toDataURL("image/png"),
+    //       },
+    //       (response) => {
+    //         console.log("received user data", response);
+    //       }
+    //     );
+    //   });
+    // }
   };
 
   return (
@@ -218,7 +325,7 @@ const Modal = (props: ComponentProps<any>) => {
         <div style={ModalContent} id={imageContentId}>
           <div
             style={FrameStyle}
-            dangerouslySetInnerHTML={{ __html: content_wrapper.innerHTML }}
+            dangerouslySetInnerHTML={{ __html: QAContent.innerHTML }}
           ></div>
         </div>
 

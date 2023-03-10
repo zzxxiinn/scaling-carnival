@@ -1,13 +1,12 @@
-function polling() {
-  console.log("polling");
-  setTimeout(polling, 1000 * 30);
-}
+const MSG_TYPE = {
+  DOWNLOAD_IMAGE: "download-image",
+};
 
-polling();
-
-chrome.runtime.onMessage.addListener(function (arg, sender, sendResponse) {
-  // chrome.downloads.download({
-  //   url: response.image,
-  //   filename: "screenshot.png"
-  // });
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.msg_type === MSG_TYPE.DOWNLOAD_IMAGE) {
+    chrome.downloads.download({
+      url: message.data,
+      filename: "QA.png",
+    });
+  }
 });
